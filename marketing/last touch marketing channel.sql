@@ -16,7 +16,7 @@
 -- +-------------+-------------+------------------+-------------+
 
 
--- Solution
+-- Solution 1
 SELECT
   a.visitorID, 
   last_value(a.marketingChannel) over (
@@ -31,3 +31,34 @@ LEFT JOIN `SalesTable` as b
 ON a.visitorID = b.visitorID
 WHERE a.revenue > 0
 GROUP BY a.visitorID, a.marketingChannel, a.visitNumber
+
+
+-- Solution 2
+WITH table_1 as (
+SELECT 
+  visitorID, 
+  last_value(marketingChannel) over (
+    partition by visitorID
+    order by visitNumber
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+  ) as `last_touch_channel`,  
+  visitNumber
+FROM `SalesTable`
+WHERE revenue > 0
+),
+
+table_2 as (
+Select
+  visitorID,
+  count(marketingChannel) as `number_of_channels`
+FROM `SalesTable`
+GROUP BY visitorID
+)
+
+SELECT
+  table_1.visitorID,
+  table_1.last_touch_channel,
+  table_1.visitNumber as `number_of_visits`,
+  table_2.number_of_channels
+FROM table_1
+LEFT JOIN table_2 on table_1.visitorID = table_2.visitorID
